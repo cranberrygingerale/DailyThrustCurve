@@ -1,0 +1,381 @@
+<title>Thrust Curve</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column like a test-stand data sheet. The strip chart leads, the guess log sits under it. */
+:root {
+  --paper: #E9EFE0;        /* engineering-pad green */
+  --panel: #F5F8EE;
+  --grid: #C6D5BA;
+  --grid-strong: #9CB58E;
+  --ink: #1C2A22;
+  --ink-soft: #52635A;
+  --trace: #1A3E9C;        /* mystery curve: blue pen */
+  --trace-fill: rgba(26, 62, 156, .13);
+  --overlay: #C2410C;      /* your guess: red pencil */
+  --ghost: #8A9A8C;
+  --good: #2E7D4F;  --on-good: #FFFFFF;
+  --near: #E6B93F;  --on-near: #2B1F00;
+  --miss: #D5DECB;  --on-miss: #33443A;
+  --display: "Big Shoulders Display", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0E2238; --panel: #142D49; --grid: #1F4166; --grid-strong: #36638F;
+    --ink: #E3EDF7; --ink-soft: #9DB4CC;
+    --trace: #F2F6FA; --trace-fill: rgba(242, 246, 250, .12); --overlay: #FFB454; --ghost: #5F7C99;
+    --good: #43A870; --on-good: #04210F; --near: #E6B93F; --on-near: #2B1F00; --miss: #1D3C5E; --on-miss: #C5D6E8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0E2238; --panel: #142D49; --grid: #1F4166; --grid-strong: #36638F;
+  --ink: #E3EDF7; --ink-soft: #9DB4CC;
+  --trace: #F2F6FA; --trace-fill: rgba(242, 246, 250, .12); --overlay: #FFB454; --ghost: #5F7C99;
+  --good: #43A870; --on-good: #04210F; --near: #E6B93F; --on-near: #2B1F00; --miss: #1D3C5E; --on-miss: #C5D6E8;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 640px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: flex; flex-direction: column; gap: 16px; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--overlay); outline-offset: 2px; }
+
+header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; border-bottom: 2px solid var(--ink); padding-bottom: 8px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: 44px; line-height: .9; letter-spacing: .01em; text-transform: uppercase; margin: 0; }
+.meta { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); text-align: right; white-space: nowrap; display: flex; flex-direction: column; gap: 2px; }
+.meta b { color: var(--ink); font-weight: 600; }
+
+.chart { background: var(--panel); border: 1px solid var(--grid-strong); }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart text { font-family: var(--mono); font-size: 12px; fill: var(--ink-soft); }
+.chart .axis-title { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 6px 10px 8px; border-top: 1px solid var(--grid); font-family: var(--mono); font-size: 12px; color: var(--ink-soft); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 18px; height: 0; border-top: 3px solid var(--trace); }
+.legend i.ov { border-top: 2px dashed var(--overlay); }
+
+form { display: flex; gap: 8px; }
+.combo { position: relative; flex: 1; min-width: 0; }
+#guess-input { width: 100%; height: 46px; padding: 0 12px; background: var(--panel); border: 1.5px solid var(--ink); border-radius: 0; font-family: var(--mono); font-size: 16px; }
+#guess-input::placeholder { color: var(--ink-soft); }
+#suggest { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; margin: 0; padding: 0; list-style: none; max-height: 264px; overflow-y: auto; background: var(--panel); border: 1.5px solid var(--ink); border-top: 0; }
+#suggest li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 12px; cursor: pointer; font-family: var(--mono); font-size: 14px; }
+#suggest li span { white-space: nowrap; }
+#suggest li small { color: var(--ink-soft); font-size: 12px; text-align: right; }
+#suggest li[aria-selected="true"], #suggest li:hover { background: var(--miss); }
+#suggest li.none { cursor: default; color: var(--ink-soft); }
+.btn { height: 46px; padding: 0 18px; background: var(--ink); color: var(--paper); border: 1.5px solid var(--ink); border-radius: 0; font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--ink); }
+
+.log { display: flex; flex-direction: column; gap: 6px; }
+.cols, .cells { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.cols span { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); text-align: center; }
+ol#guesses { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.gname { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
+.gname button { background: none; border: 0; padding: 0; cursor: pointer; font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .03em; text-align: left; }
+.gname button[aria-pressed="true"] { color: var(--overlay); text-decoration: underline dashed 1.5px; text-underline-offset: 4px; }
+.gname span { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); }
+.cell { min-height: 46px; padding: 4px 3px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: var(--miss); color: var(--on-miss); font-family: var(--mono); font-size: 12.5px; font-weight: 500; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cell.good { background: var(--good); color: var(--on-good); }
+.cell.near { background: var(--near); color: var(--on-near); }
+.cell .arrow { font-size: 13px; font-weight: 600; }
+.cell.empty { background: transparent; border: 1px dashed var(--grid-strong); min-height: 26px; }
+.cell.txt { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .02em; overflow-wrap: normal; }
+@media (prefers-reduced-motion: no-preference) { .guess.new .cell { animation: stamp .35s both; } .guess.new .cell:nth-child(2){animation-delay:.07s} .guess.new .cell:nth-child(3){animation-delay:.14s} .guess.new .cell:nth-child(4){animation-delay:.21s} .guess.new .cell:nth-child(5){animation-delay:.28s} .guess.new .cell:nth-child(6){animation-delay:.35s} }
+@keyframes stamp { from { transform: scaleY(.1); opacity: .2; } to { transform: none; opacity: 1; } }
+
+.result { border: 2px solid var(--ink); background: var(--panel); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.result h2 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1; text-transform: uppercase; margin: 0; text-wrap: balance; }
+.result p { margin: 0; }
+.result a { color: var(--trace); }
+.spec { font-family: var(--mono); font-size: 13px; color: var(--ink-soft); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; border-block: 1px solid var(--grid-strong); padding-block: 8px; }
+.stats div { text-align: center; font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
+.stats b { display: block; font-family: var(--display); font-weight: 800; font-size: 28px; line-height: 1; color: var(--ink); letter-spacing: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.actions .next { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); margin-left: auto; }
+#share-text { width: 100%; font-family: var(--mono); font-size: 13px; background: var(--paper); color: var(--ink); border: 1px solid var(--grid-strong); padding: 8px; resize: none; }
+
+details { border-top: 1px solid var(--grid-strong); padding-top: 10px; }
+summary { cursor: pointer; font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+details ul { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; max-width: 62ch; }
+.key { display: inline-block; padding: 0 6px; font-family: var(--mono); font-size: 12px; }
+.key.good { background: var(--good); color: var(--on-good); } .key.near { background: var(--near); color: var(--on-near); } .key.miss { background: var(--miss); color: var(--on-miss); }
+footer { font-size: 12px; color: var(--ink-soft); }
+footer a { color: inherit; }
+#toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 8px 14px; font-family: var(--mono); font-size: 13px; }
+@media (max-width: 440px) {
+  h1 { font-size: 36px; }
+  .cell { font-size: 11px; min-height: 44px; }
+  .cell.txt { font-size: 13.5px; }
+  .cell.empty { min-height: 22px; }
+  .cols span { font-size: 9.5px; letter-spacing: .02em; }
+  .btn { padding: 0 12px; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Thrust Curve</h1>
+    <div class="meta"><span id="mode-label">Daily <b id="puzzle-no">#1</b></span><span id="guess-count">0 / 6 guesses</span></div>
+  </header>
+
+  <div class="chart">
+    <svg id="chart" viewBox="0 0 640 340" role="img" aria-label="Thrust over time for the mystery motor"></svg>
+    <div class="legend"><span><i></i>Mystery motor</span><span id="legend-ov" hidden><i class="ov"></i><span id="legend-ov-name"></span></span></div>
+  </div>
+
+  <form id="guess-form" autocomplete="off">
+    <div class="combo">
+      <input id="guess-input" type="text" role="combobox" aria-expanded="false" aria-controls="suggest" aria-autocomplete="list" aria-label="Motor guess" placeholder="Name a motor: J350, Estes C6…" autocapitalize="off" spellcheck="false">
+      <ul id="suggest" role="listbox" hidden></ul>
+    </div>
+    <button class="btn" id="guess-btn" type="submit" disabled>Guess</button>
+  </form>
+
+  <section class="result" id="result" hidden>
+    <h2 id="result-title"></h2>
+    <p class="spec" id="result-spec"></p>
+    <p><a id="result-link" href="#" target="_blank" rel="noopener">See this motor on ThrustCurve.org</a></p>
+    <div class="stats" id="stats">
+      <div><b id="st-played">0</b>Played</div><div><b id="st-win">0</b>Win %</div><div><b id="st-streak">0</b>Streak</div><div><b id="st-best">0</b>Best</div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="share-btn" type="button">Copy result</button>
+      <button class="btn ghost" id="practice-btn" type="button">Practice round</button>
+      <button class="btn ghost" id="daily-btn" type="button" hidden>Back to daily</button>
+      <span class="next" id="next"></span>
+    </div>
+    <textarea id="share-text" rows="8" readonly hidden aria-label="Result text to copy"></textarea>
+  </section>
+
+  <section class="log" aria-label="Guesses">
+    <div class="cols" aria-hidden="true"><span>Maker</span><span>Class</span><span>Avg N</span><span>Burn s</span><span>Dia mm</span><span>Propellant</span></div>
+    <ol id="guesses"></ol>
+  </section>
+
+  <details id="help">
+    <summary>How to play</summary>
+    <ul>
+      <li>The chart is a real motor's thrust curve. Time is labeled; the thrust scale stays hidden until the round ends. Name the motor in six guesses.</li>
+      <li>Each guess is drawn over the mystery curve at true scale, so you can compare peak, burn time and area. Tap a guess's name to bring its curve back.</li>
+      <li><span class="key good">green</span> matches (thrust and burn within 5%). <span class="key near">yellow</span> is close: one impulse class away, thrust or burn within 25%, or the next diameter over. <span class="key miss">plain</span> is off.</li>
+      <li>↑ means the mystery motor's value is higher than your guess, ↓ lower.</li>
+      <li>A new motor arrives at midnight, your time. Practice rounds don't touch your streak.</li>
+    </ul>
+  </details>
+
+  <footer>Motor data from <a href="https://www.thrustcurve.org/" target="_blank" rel="noopener">ThrustCurve.org</a> via the <a href="https://github.com/broofa/thrustcurve-db" target="_blank" rel="noopener">thrustcurve-db</a> package. Currently produced solid motors only.</footer>
+</div>
+<div id="toast" role="status" hidden></div>
+
+<script>
+const RAW = /*__MOTORS__*/[];
+const SHARE_URL = 'https://cranberrygingerale.github.io/DailyThrustCurve/';                   // set to your GitHub Pages URL to append it to shared results
+const EPOCH = Date.UTC(2026, 9, 9);       // puzzle #1 is 9 Oct 2026
+const MAX = 6, CLASSES = 'ABCDEFGHIJKLMNO', DIAS = [...new Set(RAW.map(r => r[6]))].sort((a, b) => a - b);
+const STORE = 'thrust-curve-v1';
+
+const M = RAW.map((r, i) => ({ i, maker: r[0], des: r[1], cls: r[2], imp: r[3], avg: r[4], burn: r[5], dia: r[6], prop: r[7], url: r[8], t: r[9], f: r[10],
+  name: r[0] + ' ' + r[1], key: (r[0] + ' ' + r[1] + ' ' + r[7]).toLowerCase() }));
+const SORTED = [...M].sort((a, b) => a.imp - b.imp || a.avg - b.avg);
+const BY_NAME = new Map(M.map(m => [m.name, m]));
+const $ = id => document.getElementById(id);
+
+function today() { const d = new Date(); return Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - EPOCH) / 864e5) + 1; }
+function dailyMotor(day) { return M[(((day - 1) % M.length) + M.length) % M.length]; }
+
+function load() { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) { return {}; } }
+function save() { try { localStorage.setItem(STORE, JSON.stringify(saved)); } catch (e) {} }
+let saved = load();
+saved.stats = Object.assign({ played: 0, wins: 0, streak: 0, best: 0, lastWin: 0 }, saved.stats);
+
+// state: the round in play
+let S;
+function startDaily() {
+  const day = today();
+  if (saved.day !== day) { saved.day = day; saved.guesses = []; saved.done = false; save(); }
+  const guesses = (saved.guesses || []).map(n => BY_NAME.get(n)).filter(Boolean);
+  S = { mode: 'daily', day, answer: dailyMotor(day), guesses, hi: guesses.length ? guesses[guesses.length - 1] : null, fresh: null };
+  render();
+}
+function startPractice() {
+  S = { mode: 'practice', day: 0, answer: M[Math.floor(Math.random() * M.length)], guesses: [], hi: null, fresh: null };
+  render();
+}
+const won = () => S.guesses.some(g => g === S.answer);
+const over = () => won() || S.guesses.length >= MAX;
+
+// ---- feedback ----
+function compare(g, a) {
+  const num = (gv, av, tight, loose) => { const r = Math.abs(gv - av) / av; return { s: r <= tight ? 'good' : r <= loose ? 'near' : 'miss', arrow: r <= tight ? '' : av > gv ? '↑' : '↓' }; };
+  const ci = CLASSES.indexOf(g.cls) - CLASSES.indexOf(a.cls), di = DIAS.indexOf(g.dia) - DIAS.indexOf(a.dia);
+  return [
+    { v: g.maker, s: g.maker === a.maker ? 'good' : 'miss', arrow: '' },
+    { v: g.cls, s: ci === 0 ? 'good' : Math.abs(ci) === 1 ? 'near' : 'miss', arrow: ci === 0 ? '' : ci < 0 ? '↑' : '↓' },
+    { v: fmt(g.avg), ...num(g.avg, a.avg, .05, .25) },
+    { v: fmt(g.burn), ...num(g.burn, a.burn, .05, .25) },
+    { v: g.dia, s: di === 0 ? 'good' : Math.abs(di) === 1 ? 'near' : 'miss', arrow: di === 0 ? '' : di < 0 ? '↑' : '↓' },
+    { v: g.prop || 'n/a', s: g.prop === a.prop ? 'good' : 'miss', arrow: '' },
+  ];
+}
+function fmt(n) { return n >= 100 ? String(Math.round(n)) : n >= 10 ? String(+n.toFixed(1)) : String(+n.toFixed(2)); }
+
+// ---- chart ----
+function niceStep(range, target) { const raw = range / target, p = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
+function drawChart() {
+  const small = $('chart').clientWidth < 480, W = small ? 400 : 640, H = small ? 280 : 340, L = small ? 46 : 54, R = small ? 12 : 16, T = 14, B = 44, a = S.answer, hi = S.hi && S.hi !== a ? S.hi : null, done = over();
+  const tEnd = Math.max(a.t[a.t.length - 1], hi ? hi.t[hi.t.length - 1] : 0), fPeak = Math.max(...a.f, ...(hi ? hi.f : [0]));
+  $('chart').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const xs = niceStep(tEnd, small ? 4 : 6), ys = niceStep(fPeak * 1.04, 4), tMax = Math.ceil(tEnd / xs - 1e-9) * xs, fMax = Math.ceil(fPeak * 1.04 / ys - 1e-9) * ys;
+  const x = t => L + t / tMax * (W - L - R), y = f => H - B - f / fMax * (H - T - B);
+  const path = m => m.t.map((t, i) => (i ? 'L' : 'M') + x(t).toFixed(1) + ' ' + y(m.f[i]).toFixed(1)).join('');
+  let s = `<defs><clipPath id="plot"><rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}"/></clipPath></defs>`;
+  for (let i = 0; i * xs <= tMax + 1e-9; i++) { const t = i * xs, px = x(t).toFixed(1);
+    s += `<line x1="${px}" x2="${px}" y1="${T}" y2="${H - B}" stroke="var(--grid)" stroke-width="1"/><text x="${px}" y="${H - B + 16}" text-anchor="middle">${+t.toFixed(3)}</text>`; }
+  for (let i = 0; i * ys <= fMax + 1e-9; i++) { const f = i * ys, py = y(f).toFixed(1);
+    s += `<line x1="${L}" x2="${W - R}" y1="${py}" y2="${py}" stroke="var(--grid)" stroke-width="1"/><text x="${L - 8}" y="${+py + 4}" text-anchor="end">${done ? +f.toFixed(2) : i === 0 ? '0' : '?'}</text>`; }
+  s += `<rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="none" stroke="var(--grid-strong)" stroke-width="1"/>`;
+  s += `<text class="axis-title" x="${(L + W - R) / 2}" y="${H - 8}" text-anchor="middle">Time (s)</text>`;
+  s += `<text class="axis-title" transform="translate(13 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">Thrust (N)${done ? '' : ', scale hidden'}</text>`;
+  s += `<g clip-path="url(#plot)">`;
+  for (const g of S.guesses) if (g !== hi && g !== a) s += `<path d="${path(g)}" fill="none" stroke="var(--ghost)" stroke-width="1.2" opacity=".55"/>`;
+  s += `<path d="${path(a)}L${x(a.t[a.t.length - 1]).toFixed(1)} ${y(0)}L${x(0)} ${y(0)}Z" fill="var(--trace-fill)" stroke="none"/>`;
+  s += `<path d="${path(a)}" fill="none" stroke="var(--trace)" stroke-width="2.6" stroke-linejoin="round"/>`;
+  if (hi) s += `<path d="${path(hi)}" fill="none" stroke="var(--overlay)" stroke-width="2" stroke-dasharray="7 4" stroke-linejoin="round"/>`;
+  s += `</g>`;
+  $('chart').innerHTML = s;
+  $('legend-ov').hidden = !hi; if (hi) $('legend-ov-name').textContent = 'Your guess: ' + hi.name;
+}
+
+// ---- render ----
+function render() {
+  const done = over(), n = S.guesses.length;
+  $('mode-label').innerHTML = S.mode === 'daily' ? `Daily <b>#${S.day}</b>` : '<b>Practice</b>';
+  $('guess-count').textContent = `${n} / ${MAX} guesses`;
+  drawChart();
+  const ol = $('guesses'); ol.innerHTML = '';
+  for (let i = 0; i < MAX; i++) {
+    const li = document.createElement('li'); li.className = 'guess'; const g = S.guesses[i];
+    if (g) {
+      if (g === S.fresh) li.classList.add('new');
+      li.innerHTML = `<div class="gname"><button type="button" aria-pressed="${g === S.hi}" title="Show this curve on the chart"></button><span>${i + 1}/${MAX}</span></div><div class="cells">` +
+        compare(g, S.answer).map((c, k) => `<div class="cell ${c.s}${k === 0 || k === 5 ? ' txt' : ''}"><span></span>${c.arrow ? `<span class="arrow">${c.arrow}</span>` : ''}</div>`).join('') + '</div>';
+      li.querySelector('button').textContent = g.name;
+      compare(g, S.answer).forEach((c, k) => { li.querySelectorAll('.cell')[k].firstChild.textContent = c.v; });
+      li.querySelector('button').onclick = () => { S.hi = g; S.fresh = null; render(); };
+    } else {
+      li.innerHTML = '<div class="cells">' + '<div class="cell empty"></div>'.repeat(6) + '</div>';
+    }
+    ol.appendChild(li);
+  }
+  $('guess-form').hidden = done;
+  $('result').hidden = !done;
+  if (done) renderResult();
+}
+function renderResult() {
+  const a = S.answer, w = won(), st = saved.stats;
+  $('result-title').textContent = (w ? ['First-shot ignition', 'Nominal flight', 'Nominal flight', 'Good recovery', 'Good recovery', 'Late deployment'][S.guesses.length - 1] : 'CATO') + ': ' + a.name;
+  $('result-spec').textContent = `${a.cls} class · ${fmt(a.imp)} N·s total · ${fmt(a.avg)} N average · ${fmt(a.burn)} s burn · ${a.dia} mm` + (a.prop ? ` · ${a.prop}` : '');
+  $('result-link').href = 'https://www.thrustcurve.org/motors/' + a.url;
+  $('st-played').textContent = st.played; $('st-win').textContent = st.played ? Math.round(100 * st.wins / st.played) : 0;
+  $('st-streak').textContent = st.streak; $('st-best').textContent = st.best;
+  $('stats').hidden = S.mode !== 'daily';
+  $('daily-btn').hidden = S.mode === 'daily';
+  $('practice-btn').textContent = S.mode === 'daily' ? 'Practice round' : 'Another round';
+  $('share-text').hidden = true;
+  tick();
+}
+function shareText() {
+  const sq = { good: '🟩', near: '🟨', miss: '⬜' };
+  const rows = S.guesses.map(g => compare(g, S.answer).map(c => sq[c.s]).join(''));
+  return `Thrust Curve ${S.mode === 'daily' ? '#' + S.day : 'practice'} ${won() ? S.guesses.length : 'X'}/${MAX}\n` + rows.join('\n') + (SHARE_URL ? '\n' + SHARE_URL : '');
+}
+function tick() {
+  if (!S || S.mode !== 'daily' || !over()) { $('next').textContent = ''; return; }
+  if (today() !== S.day) { startDaily(); return; }
+  const d = new Date(), s = Math.max(0, Math.floor((new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1) - d) / 1000));
+  const p = n => String(n).padStart(2, '0');
+  $('next').textContent = `Next motor in ${p(Math.floor(s / 3600))}:${p(Math.floor(s / 60) % 60)}:${p(s % 60)}`;
+}
+setInterval(tick, 1000);
+let lastSmall = null;
+window.addEventListener('resize', () => { const sm = $('chart').clientWidth < 480; if (S && sm !== lastSmall) { lastSmall = sm; drawChart(); } });
+
+function submitGuess(g) {
+  if (over() || S.guesses.includes(g)) return;
+  S.guesses.push(g); S.hi = g; S.fresh = g;
+  if (S.mode === 'daily') {
+    saved.guesses = S.guesses.map(m => m.name);
+    if (over() && !saved.done) {
+      saved.done = true; const st = saved.stats; st.played++;
+      if (won()) { st.wins++; st.streak = st.lastWin === S.day - 1 ? st.streak + 1 : 1; st.lastWin = S.day; st.best = Math.max(st.best, st.streak); }
+      else st.streak = 0;
+    }
+    save();
+  }
+  render();
+}
+
+// ---- motor picker ----
+const input = $('guess-input'), list = $('suggest'), btn = $('guess-btn');
+let matches = [], active = -1, picked = null;
+function search() {
+  const q = input.value.trim().toLowerCase(); picked = null; btn.disabled = true; active = -1;
+  if (!q) { closeList(); return; }
+  const toks = q.split(/\s+/);
+  matches = SORTED.filter(m => !S.guesses.includes(m) && toks.every(t => m.key.includes(t)));
+  const lead = toks[toks.length - 1], starts = m => m.des.toLowerCase().startsWith(lead) ? 0 : 1;
+  matches.sort((a, b) => starts(a) - starts(b));
+  matches = matches.slice(0, 60);
+  const exact = matches.filter(m => m.name.toLowerCase() === q);
+  if (exact.length === 1) { picked = exact[0]; btn.disabled = false; }
+  list.innerHTML = '';
+  if (!matches.length) { list.innerHTML = '<li class="none">No motor matches. Try a designation like H128 or a maker name.</li>'; }
+  matches.forEach((m, i) => {
+    const li = document.createElement('li'); li.setAttribute('role', 'option'); li.id = 'opt-' + i; li.setAttribute('aria-selected', 'false');
+    const a = document.createElement('span'), b = document.createElement('small'); a.textContent = m.name; b.textContent = m.dia + ' mm' + (m.prop ? ' · ' + m.prop : '');
+    li.append(a, b); li.onmousedown = e => { e.preventDefault(); pick(m); };
+    list.appendChild(li);
+  });
+  list.hidden = false; input.setAttribute('aria-expanded', 'true');
+}
+function closeList() { list.hidden = true; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); }
+function pick(m) { picked = m; input.value = m.name; btn.disabled = false; closeList(); btn.focus(); }
+function setActive(i) {
+  if (!matches.length) return;
+  active = (i + matches.length) % matches.length;
+  [...list.children].forEach((li, k) => li.setAttribute('aria-selected', k === active));
+  list.children[active].scrollIntoView({ block: 'nearest' }); input.setAttribute('aria-activedescendant', 'opt-' + active);
+}
+input.addEventListener('input', search);
+input.addEventListener('focus', () => { if (input.value.trim() && !picked) search(); });
+input.addEventListener('blur', closeList);
+input.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); if (list.hidden) search(); setActive(active + 1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
+  else if (e.key === 'Escape') closeList();
+  else if (e.key === 'Enter' && !list.hidden && matches.length) { e.preventDefault(); pick(matches[active < 0 ? 0 : active]); }
+});
+$('guess-form').addEventListener('submit', e => {
+  e.preventDefault(); if (!picked) return;
+  const g = picked; picked = null; input.value = ''; btn.disabled = true; closeList();
+  submitGuess(g); if (!over()) input.focus();
+});
+
+let toastTimer;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 1800); }
+$('share-btn').onclick = () => {
+  const text = shareText(), fallback = () => { const ta = $('share-text'); ta.value = text; ta.hidden = false; ta.focus(); ta.select(); toast('Select and copy the text below'); };
+  try { navigator.clipboard.writeText(text).then(() => toast('Result copied'), fallback); } catch (e) { fallback(); }
+};
+$('practice-btn').onclick = startPractice;
+$('daily-btn').onclick = startDaily;
+
+if (!saved.seenHelp) { $('help').open = true; saved.seenHelp = true; save(); }
+startDaily();
+</script>
