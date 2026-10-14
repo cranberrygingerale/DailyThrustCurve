@@ -19,10 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This license covers the game's source code only: template.html, build.mjs and
-the code portions of index.html. It does not cover the rocket motor data
-embedded in index.html, which comes from ThrustCurve.org and remains subject to
-its owners' rights. See TERMS.md for details on third-party content.
