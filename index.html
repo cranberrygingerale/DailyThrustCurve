@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="A daily guessing game: name the rocket motor from its thrust curve.">
 <style>body{margin:0}[hidden]{display:none!important}</style>
-<title>Thrust Curve</title>
+<title>Thrust Curve Daily</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230F172A'/%3E%3Cpath d='M5 26H27M5 26V6' stroke='%23334155' stroke-width='1.5' stroke-linecap='round'/%3E%3Cpath d='M5 26C6.5 12 8 7 10 7C12 7 13 17 16 17H22C24.5 17 25.5 22 27 26Z' fill='%23FF6B00' fill-opacity='.2'/%3E%3Cpath d='M5 26C6.5 12 8 7 10 7C12 7 13 17 16 17H22C24.5 17 25.5 22 27 26' stroke='%23FF6B00' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='10' cy='7' r='1.75' fill='%23E6B93F'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 /* Layout: one narrow column like a test-stand data sheet. The strip chart leads, the guess log sits under it. */
 :root {
@@ -24,13 +25,13 @@
   --good: #2E7D4F;  --on-good: #FFFFFF;
   --near: #E6B93F;  --on-near: #2B1F00;
   --miss: #D5DECB;  --on-miss: #33443A;
-  --display: "Big Shoulders Display", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --title: "Chakra Petch", "Bahnschrift", "Arial", sans-serif;
   --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0E2238; --panel: #142D49; --grid: #1F4166; --grid-strong: #36638F;
+    --paper: #0F172A; --panel: #142D49; --grid: #1F4166; --grid-strong: #36638F;
     --ink: #E3EDF7; --ink-soft: #9DB4CC;
     --trace: #F2F6FA; --trace-fill: rgba(242, 246, 250, .12); --overlay: #FFB454; --ghost: #5F7C99;
     --good: #43A870; --on-good: #04210F; --near: #E6B93F; --on-near: #2B1F00; --miss: #1D3C5E; --on-miss: #C5D6E8;
@@ -38,7 +39,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --paper: #0E2238; --panel: #142D49; --grid: #1F4166; --grid-strong: #36638F;
+  --paper: #0F172A; --panel: #142D49; --grid: #1F4166; --grid-strong: #36638F;
   --ink: #E3EDF7; --ink-soft: #9DB4CC;
   --trace: #F2F6FA; --trace-fill: rgba(242, 246, 250, .12); --overlay: #FFB454; --ghost: #5F7C99;
   --good: #43A870; --on-good: #04210F; --near: #E6B93F; --on-near: #2B1F00; --miss: #1D3C5E; --on-miss: #C5D6E8;
@@ -51,7 +52,7 @@ button, input { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--overlay); outline-offset: 2px; }
 
 header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; border-bottom: 2px solid var(--ink); padding-bottom: 8px; }
-h1 { font-family: var(--display); font-weight: 800; font-size: 44px; line-height: .9; letter-spacing: .01em; text-transform: uppercase; margin: 0; }
+h1 { font-family: var(--title); font-weight: 600; font-size: 34px; line-height: 1; letter-spacing: .01em; text-transform: uppercase; margin: 0; }
 .meta { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); text-align: right; white-space: nowrap; display: flex; flex-direction: column; gap: 2px; }
 .meta b { color: var(--ink); font-weight: 600; }
 
@@ -74,7 +75,7 @@ form { display: flex; gap: 8px; }
 #suggest li small { color: var(--ink-soft); font-size: 12px; text-align: right; }
 #suggest li[aria-selected="true"], #suggest li:hover { background: var(--miss); }
 #suggest li.none { cursor: default; color: var(--ink-soft); }
-.btn { height: 46px; padding: 0 18px; background: var(--ink); color: var(--paper); border: 1.5px solid var(--ink); border-radius: 0; font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+.btn { height: 46px; padding: 0 18px; background: var(--ink); color: var(--paper); border: 1.5px solid var(--ink); border-radius: 0; font-family: var(--title); font-weight: 600; font-size: 16px; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 .btn.ghost { background: transparent; color: var(--ink); }
 
@@ -83,7 +84,7 @@ form { display: flex; gap: 8px; }
 .cols span { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); text-align: center; }
 ol#guesses { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .gname { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
-.gname button { background: none; border: 0; padding: 0; cursor: pointer; font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .03em; text-align: left; }
+.gname button { background: none; border: 0; padding: 0; cursor: pointer; font-family: var(--mono); font-weight: 600; font-size: 16px; letter-spacing: 0; text-align: left; }
 .gname button[aria-pressed="true"] { color: var(--overlay); text-decoration: underline dashed 1.5px; text-underline-offset: 4px; }
 .gname span { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); }
 .cell { min-height: 46px; padding: 4px 3px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: var(--miss); color: var(--on-miss); font-family: var(--mono); font-size: 12.5px; font-weight: 500; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -91,18 +92,18 @@ ol#guesses { list-style: none; margin: 0; padding: 0; display: flex; flex-direct
 .cell.near { background: var(--near); color: var(--on-near); }
 .cell .arrow { font-size: 13px; font-weight: 600; }
 .cell.empty { background: transparent; border: 1px dashed var(--grid-strong); min-height: 26px; }
-.cell.txt { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .02em; overflow-wrap: normal; }
+.cell.txt { font-family: var(--mono); font-weight: 600; font-size: 13px; letter-spacing: 0; overflow-wrap: normal; }
 @media (prefers-reduced-motion: no-preference) { .guess.new .cell { animation: stamp .35s both; } .guess.new .cell:nth-child(2){animation-delay:.07s} .guess.new .cell:nth-child(3){animation-delay:.14s} .guess.new .cell:nth-child(4){animation-delay:.21s} .guess.new .cell:nth-child(5){animation-delay:.28s} .guess.new .cell:nth-child(6){animation-delay:.35s} }
 @keyframes stamp { from { transform: scaleY(.1); opacity: .2; } to { transform: none; opacity: 1; } }
 
 .result { border: 2px solid var(--ink); background: var(--panel); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
-.result h2 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1; text-transform: uppercase; margin: 0; text-wrap: balance; }
+.result h2 { font-family: var(--title); font-weight: 600; font-size: 24px; line-height: 1.1; text-transform: uppercase; margin: 0; text-wrap: balance; }
 .result p { margin: 0; }
 .result a { color: var(--trace); }
 .spec { font-family: var(--mono); font-size: 13px; color: var(--ink-soft); }
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; border-block: 1px solid var(--grid-strong); padding-block: 8px; }
 .stats div { text-align: center; font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
-.stats b { display: block; font-family: var(--display); font-weight: 800; font-size: 28px; line-height: 1; color: var(--ink); letter-spacing: 0; }
+.stats b { display: block; font-family: var(--title); font-weight: 600; font-size: 26px; line-height: 1; color: var(--ink); letter-spacing: 0; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .actions .next { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); margin-left: auto; }
 #share-text { width: 100%; font-family: var(--mono); font-size: 13px; background: var(--paper); color: var(--ink); border: 1px solid var(--grid-strong); padding: 8px; resize: none; }
@@ -116,12 +117,12 @@ footer { font-size: 12px; color: var(--ink-soft); }
 footer a { color: inherit; }
 #toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 8px 14px; font-family: var(--mono); font-size: 13px; }
 @media (max-width: 440px) {
-  h1 { font-size: 36px; }
+  h1 { font-size: 26px; }
   .cell { font-size: 11px; min-height: 44px; }
-  .cell.txt { font-size: 13.5px; }
+  .cell.txt { font-size: 10.5px; }
   .cell.empty { min-height: 22px; }
   .cols span { font-size: 9.5px; letter-spacing: .02em; }
-  .btn { padding: 0 12px; }
+  .btn { padding: 0 12px; font-size: 14px; }
 }
 </style>
 </head>
@@ -130,7 +131,7 @@ footer a { color: inherit; }
 
 <div class="wrap">
   <header>
-    <h1>Thrust Curve</h1>
+    <h1>Thrust Curve Daily</h1>
     <div class="meta"><span id="mode-label">Daily <b id="puzzle-no">#1</b></span><span id="guess-count">0 / 6 guesses</span></div>
   </header>
 
@@ -179,7 +180,7 @@ footer a { color: inherit; }
     </ul>
   </details>
 
-  <footer>Motor data from <a href="https://www.thrustcurve.org/" target="_blank" rel="noopener">ThrustCurve.org</a> via the <a href="https://github.com/broofa/thrustcurve-db" target="_blank" rel="noopener">thrustcurve-db</a> package. Currently produced solid motors only.</footer>
+  <footer>Motor data from <a href="https://www.thrustcurve.org/" target="_blank" rel="noopener">ThrustCurve.org</a> via the <a href="https://github.com/broofa/thrustcurve-db" target="_blank" rel="noopener">thrustcurve-db</a> package. Currently produced solid motors only. For fun, not flight planning. Not affiliated with ThrustCurve.org or any motor maker.<br><a href="https://github.com/cranberrygingerale/DailyThrustCurve/blob/main/TERMS.md" target="_blank" rel="noopener">Terms</a> · <a href="https://github.com/cranberrygingerale/DailyThrustCurve/blob/main/PRIVACY.md" target="_blank" rel="noopener">Privacy</a> · <a href="https://github.com/cranberrygingerale/DailyThrustCurve" target="_blank" rel="noopener">Source</a></footer>
 </div>
 <div id="toast" role="status" hidden></div>
 
@@ -303,7 +304,7 @@ function renderResult() {
 function shareText() {
   const sq = { good: '🟩', near: '🟨', miss: '⬜' };
   const rows = S.guesses.map(g => compare(g, S.answer).map(c => sq[c.s]).join(''));
-  return `Thrust Curve ${S.mode === 'daily' ? '#' + S.day : 'practice'} ${won() ? S.guesses.length : 'X'}/${MAX}\n` + rows.join('\n') + (SHARE_URL ? '\n' + SHARE_URL : '');
+  return `Thrust Curve Daily ${S.mode === 'daily' ? '#' + S.day : 'practice'} ${won() ? S.guesses.length : 'X'}/${MAX}\n` + rows.join('\n') + (SHARE_URL ? '\n' + SHARE_URL : '');
 }
 function tick() {
   if (!S || S.mode !== 'daily' || !over()) { $('next').textContent = ''; return; }
